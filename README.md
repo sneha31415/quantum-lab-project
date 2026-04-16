@@ -24,18 +24,11 @@ Run the main comparison plot:
 python main.py
 ```
 
-Run only the quantum walk plot:
-
-```bash
-python quantum_walk.py
-```
-
 ## Files
 
 - `classical_walk.py`: classical random walk simulation and plotting helper
 - `quantum_walk.py`: quantum random walk simulation and plotting helper
 - `main.py`: side-by-side comparison of classical and quantum walks
-- `plot_results.py`: optional plotting script
 
 ## Output
 
