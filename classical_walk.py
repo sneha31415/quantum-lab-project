@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from graph_topology import GraphTopology, corridor_graph
+
 
 def classical_random_walk(steps=50, trials=1000):
     final_positions = []
@@ -37,17 +39,46 @@ def classical_target_search(steps=60, trials=5000, target_position=20, start_pos
     return hit_times
 
 
+def classical_graph_target_search(
+    graph: GraphTopology,
+    steps=60,
+    trials=5000,
+    target_node=0,
+    start_node=0,
+    seed=None,
+):
+    """Run repeated classical random-walk searches on a graph and return first hitting times."""
+    rng = np.random.default_rng(seed)
+    hit_times = np.full(trials, np.nan)
+
+    if start_node == target_node:
+        hit_times.fill(0.0)
+        return hit_times
+
+    for trial in range(trials):
+        node = start_node
+
+        for step in range(1, steps + 1):
+            neighbors = graph.neighbors(node)
+            if not neighbors:
+                break
+
+            node = int(rng.choice(neighbors))
+            if node == target_node:
+                hit_times[trial] = step
+                break
+
+    return hit_times
+
+
 def classical_cumulative_hit_probability(hit_times, steps):
     """Return cumulative probability of hitting target by each step."""
     cumulative = np.zeros(steps)
-    finite_hits = hit_times[np.isfinite(hit_times)]
 
     for step in range(1, steps + 1):
-        cumulative[step - 1] = np.mean(finite_hits <= step) if finite_hits.size else 0.0
+        cumulative[step - 1] = float(np.mean(np.isfinite(hit_times) & (hit_times <= step)))
 
-    # The mean above is over successful trials only; convert to total-trial probability.
-    success_rate = np.mean(np.isfinite(hit_times))
-    return cumulative * success_rate
+    return cumulative
 
 
 

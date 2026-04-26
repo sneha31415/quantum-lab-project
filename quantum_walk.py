@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from graph_topology import GraphTopology, corridor_graph
+
 def quantum_random_walk(steps=50):
     """Simulates a 1D Quantum Random Walk."""
     # Total grid size: needs to go from -steps to +steps
@@ -40,6 +42,120 @@ def quantum_random_walk(steps=50):
     probabilities = np.abs(state[:, 0])**2 + np.abs(state[:, 1])**2
     
     return probabilities
+
+
+def _build_graph_walk_basis(graph: GraphTopology):
+    directed_edges = []
+    edge_to_index = {}
+    outgoing_edges = [[] for _ in range(graph.num_nodes)]
+
+    for source, neighbors in enumerate(graph.adjacency):
+        for destination in neighbors:
+            edge = (source, destination)
+            edge_to_index[edge] = len(directed_edges)
+            directed_edges.append(edge)
+            outgoing_edges[source].append(edge_to_index[edge])
+
+    return directed_edges, edge_to_index, [tuple(indices) for indices in outgoing_edges]
+
+
+def _apply_grover_coin(state, outgoing_edges):
+    coin_state = state.copy()
+
+    for edge_indices in outgoing_edges:
+        edge_indices = np.asarray(edge_indices, dtype=int)
+        degree = len(edge_indices)
+        if degree == 0:
+            continue
+
+        amplitudes = coin_state[edge_indices]
+        coin_state[edge_indices] = 2.0 * np.mean(amplitudes) - amplitudes
+
+    return coin_state
+
+
+def quantum_graph_target_search(
+    graph: GraphTopology,
+    steps=60,
+    target_node=0,
+    start_node=0,
+    shots=5000,
+    seed=None,
+):
+    """Estimate first hitting times for a coined quantum walk on a graph."""
+    if start_node < 0 or start_node >= graph.num_nodes:
+        raise ValueError("start_node is out of range.")
+    if target_node < 0 or target_node >= graph.num_nodes:
+        raise ValueError("target_node is out of range.")
+
+    rng = np.random.default_rng(seed)
+    directed_edges, edge_to_index, outgoing_edges = _build_graph_walk_basis(graph)
+    state = np.zeros(len(directed_edges), dtype=complex)
+    target_edge_indices = np.asarray(outgoing_edges[target_node], dtype=int)
+
+    if start_node == target_node:
+        first_hit_probabilities = np.zeros(steps)
+        if steps > 0:
+            first_hit_probabilities[0] = 1.0
+        cumulative_hit_probabilities = np.cumsum(first_hit_probabilities)
+        hit_times = np.zeros(shots, dtype=float)
+        return {
+            "first_hit_probabilities": first_hit_probabilities,
+            "cumulative_hit_probabilities": cumulative_hit_probabilities,
+            "success_probability": float(cumulative_hit_probabilities[-1]) if steps > 0 else 1.0,
+            "hit_times": hit_times,
+        }
+
+    start_degree = graph.degree(start_node)
+    if start_degree == 0:
+        raise ValueError("start_node must have at least one neighbor for a quantum walk.")
+
+    initial_amplitude = 1.0 / np.sqrt(start_degree)
+    for edge_index in outgoing_edges[start_node]:
+        state[edge_index] = initial_amplitude
+
+    first_hit_probabilities = np.zeros(steps)
+
+    for step in range(steps):
+        state = _apply_grover_coin(state, outgoing_edges)
+
+        shifted_state = np.zeros_like(state)
+        for edge_index, (source, destination) in enumerate(directed_edges):
+            reverse_index = edge_to_index.get((destination, source))
+            if reverse_index is None:
+                raise ValueError("Graph must be undirected and contain reverse edges for each link.")
+            shifted_state[reverse_index] = state[edge_index]
+
+        state = shifted_state
+
+        if target_edge_indices.size > 0:
+            hit_probability = float(np.sum(np.abs(state[target_edge_indices]) ** 2))
+            first_hit_probabilities[step] = hit_probability
+            state[target_edge_indices] = 0.0
+
+    cumulative_hit_probabilities = np.cumsum(first_hit_probabilities)
+    success_probability = float(cumulative_hit_probabilities[-1]) if steps > 0 else 0.0
+
+    miss_probability = max(0.0, 1.0 - success_probability)
+    sampling_probs = np.concatenate([first_hit_probabilities, np.array([miss_probability])])
+    sampling_probs = np.clip(sampling_probs, 0.0, None)
+    sampling_total = float(np.sum(sampling_probs))
+    if sampling_total == 0.0:
+        sampling_probs = np.zeros_like(sampling_probs)
+        sampling_probs[-1] = 1.0
+    else:
+        sampling_probs = sampling_probs / sampling_total
+
+    sampled = rng.choice(np.arange(1, steps + 2), size=shots, p=sampling_probs)
+    hit_times = sampled.astype(float)
+    hit_times[hit_times == (steps + 1)] = np.nan
+
+    return {
+        "first_hit_probabilities": first_hit_probabilities,
+        "cumulative_hit_probabilities": cumulative_hit_probabilities,
+        "success_probability": success_probability,
+        "hit_times": hit_times,
+    }
 
 
 def quantum_target_search(
