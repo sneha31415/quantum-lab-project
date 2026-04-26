@@ -4,15 +4,13 @@ This project compares classical and quantum random walks for an application-orie
 
 "Given a map (corridor/grid/network), how quickly can an agent find a target node?"
 
-Phase 1 in this repository implements the corridor (1D line) benchmark and evaluates search quality using first hitting time metrics.
+Phase 2 extends the benchmark from a 1D corridor to graph-based maps, including grids and simple user-defined networks, while keeping the same search API for classical and quantum walkers.
 
 ## Requirements
 
 - Python 3.10+
 - `numpy`
 - `matplotlib`
-- `qiskit`
-- `qiskit-aer`
 
 Install the dependencies with:
 
@@ -30,14 +28,15 @@ python main.py
 
 The script generates:
 
-- cumulative hit probability vs step
-- first hitting time histograms
-- summary statistics panel with success rate and mean hitting time
+- speedup comparison across corridor, grid, and network maps
+- cumulative hit probability curves for representative distance sweeps
+- summary statistics panel with success rate, mean hitting time, and speedup ratio
 
 ## Files
 
 - `classical_walk.py`: classical walk simulation, target search, cumulative hit probability
-- `quantum_walk.py`: quantum walk simulation and absorbing-target quantum search
+- `graph_topology.py`: shared graph representation plus corridor/grid builders and distance utilities
+- `quantum_walk.py`: quantum walk simulation and graph-based absorbing-target search
 - `main.py`: benchmark runner, metrics summary, and application-focused plots
 
 ## Output
@@ -52,9 +51,9 @@ The benchmark reports observable performance differences via:
 
 Default values are configured in `main.py`:
 
-- step budget: 80
-- target position: +30
-- classical trials: 8000
-- quantum shots: 8000
+- step budget: 60
+- classical trials: 4000
+- quantum shots: 4000
+- scenarios: 41-node corridor, 7x7 grid, and a small branching network
 
-These can be changed directly in code for additional experiments.
+Each scenario sweeps near, mid, and far target distances derived from graph distance from the chosen start node.
