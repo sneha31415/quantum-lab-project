@@ -20,7 +20,7 @@ from ui_components import (
 # Page config
 st.set_page_config(
     page_title="Random Walk Target Search",
-    page_icon="🌊",
+    page_icon="👾",
     layout="wide",
     initial_sidebar_state="expanded",
 )
