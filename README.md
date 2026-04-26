@@ -1,6 +1,10 @@
-# Quantum Random Walk
+# Quantum Walk Search Benchmark
 
-This project compares a classical random walk with a 1D quantum random walk and visualizes both results using Matplotlib.
+This project compares classical and quantum random walks for an application-oriented task:
+
+"Given a map (corridor/grid/network), how quickly can an agent find a target node?"
+
+Phase 1 in this repository implements the corridor (1D line) benchmark and evaluates search quality using first hitting time metrics.
 
 ## Requirements
 
@@ -18,18 +22,39 @@ pip install -r requirements.txt
 
 ## How to Run
 
-Run the main comparison plot:
+Run the benchmark:
 
 ```bash
 python main.py
 ```
 
+The script generates:
+
+- cumulative hit probability vs step
+- first hitting time histograms
+- summary statistics panel with success rate and mean hitting time
+
 ## Files
 
-- `classical_walk.py`: classical random walk simulation and plotting helper
-- `quantum_walk.py`: quantum random walk simulation and plotting helper
-- `main.py`: side-by-side comparison of classical and quantum walks
+- `classical_walk.py`: classical walk simulation, target search, cumulative hit probability
+- `quantum_walk.py`: quantum walk simulation and absorbing-target quantum search
+- `main.py`: benchmark runner, metrics summary, and application-focused plots
 
 ## Output
 
-The scripts generate bar charts showing the final position probability distribution for the classical and quantum walks.
+The benchmark reports observable performance differences via:
+
+- success probability under fixed step budget
+- first hitting time distribution
+- estimated speedup ratio using mean hitting time
+
+## Current Scenario Parameters
+
+Default values are configured in `main.py`:
+
+- step budget: 80
+- target position: +30
+- classical trials: 8000
+- quantum shots: 8000
+
+These can be changed directly in code for additional experiments.
